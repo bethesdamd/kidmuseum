@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino LED Control Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #led {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin: 20px;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Arduino LED Control Simulation</h1>
+    <div id="led"></div>
+    <button id="connectBtn">Connect to Arduino</button>
+    <button id="highBtn" disabled>Set HIGH</button>
+    <button id="lowBtn" disabled>Set LOW</button>
+    <div id="status">Not connected</div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const highBtn = document.getElementById('highBtn');
+        const lowBtn = document.getElementById('lowBtn');
+        const status = document.getElementById('status');
+        const led = document.getElementById('led');
+        let port;
+
+        connectBtn.addEventListener('click', connectToArduino);
+        highBtn.addEventListener('click', () => setLED(true));
+        lowBtn.addEventListener('click', () => setLED(false));
+
+        async function connectToArduino() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                
+                status.textContent = 'Connected';
+                connectBtn.disabled = true;
+                highBtn.disabled = false;
+                lowBtn.disabled = false;
+            } catch (error) {
+                console.error('Connection error:', error);
+                status.textContent = 'Connection failed: ' + error.message;
+            }
+        }
+
+        async function setLED(high) {
+            if (!port) {
+                status.textContent = 'Not connected to Arduino';
+                return;
+            }
+
+            try {
+                const writer = port.writable.getWriter();
+                const data = new Uint8Array([high ? 1 : 0]);
+                await writer.write(data);
+                writer.releaseLock();
+
+                led.style.backgroundColor = high ? '#ff0000' : '#ccc';
+                status.textContent = `LED set to ${high ? 'HIGH' : 'LOW'}`;
+            } catch (error) {
+                console.error('Write error:', error);
+                status.textContent = 'Failed to set LED: ' + error.message;
+            }
+        }
+
+        if (!navigator.serial) {
+            status.textContent = 'WebSerial is not supported in this browser';
+            connectBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>
